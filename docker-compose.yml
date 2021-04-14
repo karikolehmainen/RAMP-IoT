@@ -1,0 +1,185 @@
+
+
+
+
+version: "3.5"
+
+services:
+    ### Database for Context Broker ###
+    mongo-db:
+        image: mongo:3.6
+        hostname: mongo-db
+        container_name: mongo
+        expose:
+            - "27017"
+        ports:
+            - 27017:27017
+        networks:
+            - default          
+        command: --bind_ip_all --smallfiles
+        volumes:
+            - ${RAMP_PATH}/mongo:/data/db
+
+    ### Context Broker ###
+    orion:
+        image: fiware/orion
+        hostname: orion
+        container_name: fiware-orion
+        depends_on:
+            - mongo-db
+        networks:
+            - default
+        ports:
+            - 1026:1026
+        command:
+            -dbhost mongo-db -logLevel DEBUG -corsOrigin __ALL -inReqPayloadMaxSize 2097152
+        restart: always
+
+    mysql:
+        image: mysql:5.7 
+        networks:
+            - default
+        ports:
+            - 3306:3306
+        environment: 
+            - MYSQL_ROOT_PASSWORD=gsm
+            - MYSQL_DATABASE=keypass
+            - MYSQL_USER=keypass
+            - MYSQL_PASSWORD=keypass
+        volumes:
+            - ${RAMP_PATH}/data/mysql:/var/lib/mysql
+        restart: always
+
+    keypass:
+        image: telefonicaiot/fiware-keypass
+        hostname: keypass
+        depends_on:
+            - mysql
+        ports:
+            - 7070:7070 
+        command:
+            -dbhost mysql
+        networks:
+            - default
+
+    keystone:
+        image: telefonicaiot/fiware-keystone-spassword
+        networks:
+            - default
+        depends_on:
+            - mysql
+        ports:
+            - 5001:5001
+        command:
+            -dbhost mysql -default_pwd 4pass1w0rd -mysql_pwd gsm
+        restart: always
+
+    steelskin:
+        image: telefonicaiot/fiware-pep-steelskin
+        depends_on:
+            - orion
+            - keypass
+        networks:
+            - default
+        ports:
+            - 11211:11211
+            - 1027:1026
+        environment:
+            - LOG_LEVEL=DEBUG
+            - AUTHENTICATION_HOST=<Keystone-host>
+            - ACCESS_HOST=<Access-control-host>
+            - TARGET_HOST=localhost:1026
+
+    iot-agent:
+        image: fiware/iotagent-ul:latest
+        hostname: iot-agent
+        container_name: fiware-iot-agent
+        depends_on:
+            - mongo-db
+        networks:
+            - default
+        expose:
+            - "4041"
+            - "7896"
+        ports:
+            - "4041:4041"
+            - "7896:7896"
+        environment:
+            - IOTA_CB_HOST=orion
+            - IOTA_CB_PORT=1026
+            - IOTA_NORTH_PORT=4041
+            - IOTA_REGISTRY_TYPE=mongodb
+            - IOTA_LOG_LEVEL=DEBUG
+            - IOTA_TIMESTAMP=true
+            - IOTA_CB_NGSI_VERSION=v2
+            - IOTA_AUTOCAST=true
+            - IOTA_MONGO_HOST=mongo-db
+            - IOTA_MONGO_PORT=27017
+            - IOTA_MONGO_DB=iotagentul
+            - IOTA_HTTP_PORT=7896
+            - IOTA_MQTT_PORT=1883
+            - IOTA_MQTT_HOST=130.188.160.83
+
+            - IOTA_PROVIDER_URL=http://iot-agent:4041
+
+    crate-db:
+        image: crate:4.1.4
+        hostname: crate-db
+        command: crate -Cauth.host_based.enabled=false -Ccluster.name=rampcluster -Chttp.cors.enabled=false -Chttp.cors.allow-origin="*"
+        environment:
+            - CRATE_HEAP_SIZE=2g
+        ports:
+            # Admin UI
+            - "4200:4200"
+            # Transport protocol
+            - "4300:4300"
+            - "5432:5432"
+        volumes:
+            - ${RAMP_PATH}/cratedata:/data
+        networks: 
+            - default
+        restart: always
+
+    quantumleap:
+        hostname: quantumleap
+        image: smartsdk/quantumleap:latest
+#        image: smartsdk/quantumleap:${QUANTUMLEAP_VERSION}
+        depends_on:
+            - crate-db
+        container_name: fiware-quantumleap
+        ports:
+            - "8668:8668"
+        environment:
+            - CRATE_HOST=crate-db
+            - CRATE_PORT=4200
+            - USE_GEOCODING=True
+            - LOGLEVEL=DEBUG
+        networks:
+            - default
+
+    ### Grafana dashboard ###
+    grafana:
+        image: grafana/grafana
+        depends_on:
+            - crate-db
+        container_name: grafana
+        hostname: grafana
+        ports:
+            - 3000:3000
+        networks:
+            - default
+        volumes:
+            - grafana-storage:/var/lib/grafana
+        restart: always
+
+volumes:
+    mongo-db:
+    cratedata:
+    grafana-storage:
+    mysql_data: {}
+
+networks:
+    default:
+        ipam:
+            config:
+                - subnet: 172.19.1.0/24
