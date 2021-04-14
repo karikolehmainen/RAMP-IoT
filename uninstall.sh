@@ -35,6 +35,7 @@ echo 'Revoming docker container volumes (if any)'
 echo '####################################################'
 docker volume rm $(docker volume ls -q)
 
+docker system prune -a
 
 if [[ -z "${RAMP_PATH}" ]]; then
   DATA_PATH="$PWD
