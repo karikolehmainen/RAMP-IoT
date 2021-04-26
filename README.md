@@ -1,4 +1,4 @@
-#RAMP IoT Platform
+# RAMP IoT Platform
 RAMP IoT Plarform is FIWARE installation to be installed on factory premises and is connected with RAMP marketplace
 
 ## Prerequisite
