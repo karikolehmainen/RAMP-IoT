@@ -6,6 +6,11 @@
 
 IFS=$(printf '\n\t')
 
+#
+# Configure Grafana datasource 
+#
+sudo mkdir /etc/grafana
+sudo cp -r provisioning /etc/grafana/
 # Docker
 sudo apt remove --yes docker docker-engine docker.io containerd runc
 sudo apt update
@@ -17,7 +22,6 @@ sudo apt --yes --no-install-recommends install docker-ce docker-ce-cli container
 sudo usermod --append --groups docker "$USER"
 sudo systemctl enable docker
 printf '\nDocker installed successfully\n\n'
-
 printf 'Waiting for Docker to start...\n\n'
 sleep 5
 
@@ -28,8 +32,15 @@ sudo wget --output-document=/etc/bash_completion.d/docker-compose "https://raw.g
 printf '\nDocker Compose installed successfully\n\n'
 
 sleep 5
+
+#
+# Copy docker daemon conf file
+#
+cp daemon.json /etc/docker/
+
+
 printf 'Launch RAMP IoT platform containers...\n\n'
-export RAMP_PATH=$(pwd)
+export RAMP_PATH=${pwd}
 
 sudo sysctl -w vm.max_map_count=262144
 sudo docker-compose up -d

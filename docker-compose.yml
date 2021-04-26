@@ -32,63 +32,8 @@ services:
         ports:
             - 1026:1026
         command:
-            -dbhost mongo-db -logLevel DEBUG -corsOrigin __ALL -inReqPayloadMaxSize 2097152
+            -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152
         restart: always
-
-    mysql:
-        image: mysql:5.7 
-        networks:
-            - default
-        ports:
-            - 3306:3306
-        environment: 
-            - MYSQL_ROOT_PASSWORD=gsm
-            - MYSQL_DATABASE=keypass
-            - MYSQL_USER=keypass
-            - MYSQL_PASSWORD=keypass
-        volumes:
-            - ${RAMP_PATH}/data/mysql:/var/lib/mysql
-        restart: always
-
-    keypass:
-        image: telefonicaiot/fiware-keypass
-        hostname: keypass
-        depends_on:
-            - mysql
-        ports:
-            - 7070:7070 
-        command:
-            -dbhost mysql
-        networks:
-            - default
-
-    keystone:
-        image: telefonicaiot/fiware-keystone-spassword
-        networks:
-            - default
-        depends_on:
-            - mysql
-        ports:
-            - 5001:5001
-        command:
-            -dbhost mysql -default_pwd 4pass1w0rd -mysql_pwd gsm
-        restart: always
-
-    steelskin:
-        image: telefonicaiot/fiware-pep-steelskin
-        depends_on:
-            - orion
-            - keypass
-        networks:
-            - default
-        ports:
-            - 11211:11211
-            - 1027:1026
-        environment:
-            - LOG_LEVEL=DEBUG
-            - AUTHENTICATION_HOST=<Keystone-host>
-            - ACCESS_HOST=<Access-control-host>
-            - TARGET_HOST=localhost:1026
 
     iot-agent:
         image: fiware/iotagent-ul:latest
@@ -109,7 +54,6 @@ services:
             - IOTA_CB_PORT=1026
             - IOTA_NORTH_PORT=4041
             - IOTA_REGISTRY_TYPE=mongodb
-            - IOTA_LOG_LEVEL=DEBUG
             - IOTA_TIMESTAMP=true
             - IOTA_CB_NGSI_VERSION=v2
             - IOTA_AUTOCAST=true
@@ -143,7 +87,6 @@ services:
     quantumleap:
         hostname: quantumleap
         image: smartsdk/quantumleap:latest
-#        image: smartsdk/quantumleap:${QUANTUMLEAP_VERSION}
         depends_on:
             - crate-db
         container_name: fiware-quantumleap
@@ -153,7 +96,6 @@ services:
             - CRATE_HOST=crate-db
             - CRATE_PORT=4200
             - USE_GEOCODING=True
-            - LOGLEVEL=DEBUG
         networks:
             - default
 
@@ -170,6 +112,7 @@ services:
             - default
         volumes:
             - grafana-storage:/var/lib/grafana
+            - ./provisioning:/etc/grafana/provisioning/
         restart: always
 
 volumes:

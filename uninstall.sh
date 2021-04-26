@@ -37,13 +37,13 @@ docker volume rm $(docker volume ls -q)
 
 docker system prune -a
 
-if [[ -z "${RAMP_PATH}" ]]; then
+if [[ -z "${RAMP_PATH}" ]];
+then
   DATA_PATH="$PWD
 else
   DATA_PATH="${RAMP_PATH}"
 fi
+
 echo $DATA_PATH
 rm $DATA_PATH/mongo
 rm $DATA_PATH/cratedata
-
-
