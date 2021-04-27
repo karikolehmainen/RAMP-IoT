@@ -32,6 +32,7 @@ services:
         ports:
             - 1026:1026
         command:
+            -rm /tmp/contextBroker.pid
             -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152
         restart: always
 

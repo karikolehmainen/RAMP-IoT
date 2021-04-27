@@ -39,9 +39,9 @@ docker system prune -a
 
 if [[ -z "${RAMP_PATH}" ]];
 then
-  DATA_PATH="$PWD
+  DATA_PATH=${PWD}
 else
-  DATA_PATH="${RAMP_PATH}"
+  DATA_PATH=${RAMP_PATH}
 fi
 
 echo $DATA_PATH
