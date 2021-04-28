@@ -31,9 +31,9 @@ services:
             - default
         ports:
             - 1026:1026
-        command:
-            -rm /tmp/contextBroker.pid
-            -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152
+        entrypoint: ["sh", "-c", "rm /tmp/contextBroker.pid; /usr/bin/contextBroker -fg -multiservice -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152 -logLevel DEBUG"]
+        #command:
+        #    -dbhost mongo-db -corsOrigin __ALL -logLevel DEBUG -inReqPayloadMaxSize 2097152
         restart: always
 
     iot-agent:
@@ -116,14 +116,46 @@ services:
             - ./provisioning:/etc/grafana/provisioning/
         restart: always
 
+    # Identity Management
+    mysql:
+        image: mysql/mysql-server:5.7
+        ports:
+            - '3306:3306'
+        networks:
+            idm_network:
+                ipv4_address: 172.18.1.5
+        environment:
+           - MYSQL_ROOT_PASSWORD=idm
+           - MYSQL_ROOT_HOST=%
+
+    fiware-idm:
+        image: fiware/idm
+          
+        ports:
+            - '1024:1024'
+            - '443:443'
+        networks:
+            idm_network:
+                ipv4_address: 172.18.1.6
+        environment:
+            - IDM_DB_HOST=mysql
+            - IDM_DB_PASS=idm
+
 volumes:
     mongo-db:
     cratedata:
     grafana-storage:
-    mysql_data: {}
+    vol-mysql:
 
 networks:
     default:
         ipam:
             config:
                 - subnet: 172.19.1.0/24
+
+    idm_network:
+#        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.18.1.0/24
+                  gateway: 172.18.1.1
