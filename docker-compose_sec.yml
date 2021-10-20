@@ -1,0 +1,271 @@
+
+
+
+
+version: "3.5"
+
+services:
+    ### Database for Context Broker ###
+    mongo-db:
+        image: mongo:3.6
+        hostname: mongo-db
+        container_name: mongo
+        expose:
+            - "27017"
+        ports:
+            - 27017:27017
+        networks:
+            - default          
+        command: --bind_ip_all --smallfiles
+        volumes:
+            - ${RAMP_PATH}/mongo:/data/db
+
+    ### Context Broker ###
+    orion:
+        image: fiware/orion
+        hostname: orion
+        container_name: fiware-orion
+        depends_on:
+            - mongo-db
+        networks:
+            - default
+        ports:
+            - 1026:1026
+        entrypoint: ["sh", "-c", "rm /tmp/contextBroker.pid; /usr/bin/contextBroker -fg -multiservice -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152 -logLevel DEBUG"]
+        #command:
+        #    -dbhost mongo-db -corsOrigin __ALL -logLevel DEBUG -inReqPayloadMaxSize 2097152
+        restart: always
+
+    iot-agent:
+        image: fiware/iotagent-ul:latest
+        hostname: iot-agent
+        container_name: fiware-iot-agent
+        depends_on:
+            - mongo-db
+        networks:
+            - default
+        expose:
+            - "4041"
+            - "7896"
+        ports:
+            - "4041:4041"
+            - "7896:7896"
+        environment:
+            - IOTA_CB_HOST=orion
+            - IOTA_CB_PORT=1026
+            - IOTA_NORTH_PORT=4041
+            - IOTA_REGISTRY_TYPE=mongodb
+            - IOTA_TIMESTAMP=true
+            - IOTA_CB_NGSI_VERSION=v2
+            - IOTA_AUTOCAST=true
+            - IOTA_MONGO_HOST=mongo-db
+            - IOTA_MONGO_PORT=27017
+            - IOTA_MONGO_DB=iotagentul
+            - IOTA_HTTP_PORT=7896
+            - IOTA_MQTT_PORT=1883
+            - IOTA_MQTT_HOST=130.188.160.87
+
+            - IOTA_PROVIDER_URL=http://iot-agent:4041
+
+    crate-db:
+        image: crate:4.1.4
+        hostname: crate-db
+        command: crate -Cauth.host_based.enabled=false -Ccluster.name=rampcluster -Chttp.cors.enabled=false -Chttp.cors.allow-origin="*"
+        environment:
+            - CRATE_HEAP_SIZE=2g
+        ports:
+            # Admin UI
+            - "4200:4200"
+            # Transport protocol
+            - "4300:4300"
+            - "5432:5432"
+        volumes:
+            - ${RAMP_PATH}/cratedata:/data
+        networks: 
+            - default
+        restart: always
+
+    quantumleap:
+        hostname: quantumleap
+        image: smartsdk/quantumleap:latest
+        depends_on:
+            - crate-db
+        container_name: fiware-quantumleap
+        ports:
+            - "8668:8668"
+        environment:
+            - CRATE_HOST=crate-db
+            - CRATE_PORT=4200
+            - USE_GEOCODING=True
+        networks:
+            - default
+
+    ### Grafana dashboard ###
+    grafana:
+        image: grafana/grafana
+        depends_on:
+            - crate-db
+        container_name: grafana
+        hostname: grafana
+        ports:
+            - 3000:3000
+        networks:
+            - default
+        volumes:
+            - grafana-storage:/var/lib/grafana
+            - ./provisioning:/etc/grafana/provisioning/
+        restart: always
+
+    # Identity Management
+
+    # keyrock for testing
+    keyrock:
+        image: fiware/idm:latest
+        container_name: fiware-keyrock
+        hostname: keyrock
+        networks:
+           idm_network:
+              ipv4_address: 172.18.1.5
+        depends_on:
+           - mysql-db
+           - authzforce
+        expose:
+           - "3005"
+        ports:
+           - "3005:3005" # localhost:3005
+        environment:
+           - DEBUG=idm:*
+           - IDM_DB_HOST=mysql-db
+           - IDM_DB_PASS_FILE=/run/secrets/my_secret_data
+           - IDM_DB_USER=root
+           - IDM_HOST=http://localhost:3005
+           - IDM_PORT=3005
+           - IDM_ADMIN_USER=alice
+           - IDM_ADMIN_EMAIL=alice-the-admin@test.com
+           - IDM_ADMIN_PASS=test
+           - IDM_PDP_LEVEL=advanced
+           - IDM_AUTHZFORCE_ENABLED=true
+           - IDM_AUTHZFORCE_HOST=authzforce
+           - IDM_AUTHZFORCE_PORT=8080
+        secrets:
+           - my_secret_data
+        healthcheck:
+          interval: 5s
+
+    mysql-db:
+        restart: always
+        image: mysql/mysql-server:5.7
+        hostname: mysql-db
+        container_name: db-msql
+        expose:
+            - "3306"
+        ports:
+            - '3306:3306'
+        networks:
+            idm_network:
+                ipv4_address: 172.18.1.6
+        environment:
+           - "MYSQL_ROOT_PASSWORD_FILE=/run/secrets/my_secret_data"
+           - "MYSQL_ROOT_HOST=0.0.0.0"
+        volumes:
+           - mysql-db:/var/lib/mysql
+           - ./mysql-data:/docker-entrypoint-initdb.d/:ro # Preload Keyrock Users
+        secrets:
+           - my_secret_data
+
+
+      # Authzforce is a XACML Server PDP
+    authzforce:
+       image: fiware/authzforce-ce-server:release-8.1.0
+       hostname: authzforce
+       container_name: fiware-authzforce
+       networks:
+          idm_network:
+             ipv4_address: 172.18.1.12
+       ports:
+          - "8080:8080" # localhost:8080
+       volumes:
+          - ./authzforce/domains:/opt/authzforce-ce-server/data/domains
+       healthcheck:
+          test: curl --fail -s http://localhost:${AUTHZFORCE_PORT}/authzforce-ce/version || exit 1
+
+    # PEP Proxy
+    orion-proxy:
+       image: fiware/pep-proxy:latest
+       container_name: fiware-orion-proxy
+       hostname: orion-proxy
+       networks:
+          default:
+             ipv4_address: 172.19.1.10
+       depends_on:
+          keyrock:  # keyrock or keycloak running on network server
+             condition: service_started
+          authzforce:
+             condition: service_started
+       deploy:
+          restart_policy:
+             condition: on-failure
+       ports:
+          - "1027:1027" # localhost:1027
+       expose:
+          - "1027"
+       environment:
+          - DEBUG=pep-proxy:*
+          - PEP_PROXY_DEBUG=true
+          - PEP_PROXY_APP_HOST=orion
+          - PEP_PROXY_APP_PORT=1026
+          - PEP_PROXY_PORT=1027
+          - PEP_PROXY_IDM_HOST= 172.18.1.5  # keyrock for testing purposes
+          - PEP_PROXY_HTTPS_ENABLED=false
+          - PEP_PROXY_IDM_SSL_ENABLED=false
+          - PEP_PROXY_IDM_PORT=3005
+          - PEP_PROXY_APP_ID=tutorial-dckr-site-0000-xpresswebapp
+          - PEP_PROXY_USERNAME=pep_proxy_00000000-0000-0000-0000-000000000000
+          - PEP_PASSWORD=test
+          - PEP_PROXY_PDP=authzforce
+          - PEP_PROXY_AUTH_ENABLED=true
+          - PEP_PROXY_MAGIC_KEY=1234
+          - PEP_PROXY_AZF_PROTOCOL=http
+          - PEP_PROXY_AZF_HOST=authzforce
+          - PEP_PROXY_PUBLIC_PATHS=/version
+       healthcheck:
+          interval: 50s
+
+#    fiware-idm:
+#        image: fiware/idm
+#          
+#        ports:
+#            - '1024:1024'
+#            - '443:443'
+#        networks:
+#            idm_network:
+#                ipv4_address: 172.18.1.6
+#        environment:
+#            - IDM_DB_HOST=mysql
+#            - IDM_DB_PASS=idm
+#            - IDM_DEBUG=true
+#            - IDM_PORT=1024
+
+volumes:
+    mongo-db:
+    cratedata:
+    grafana-storage:
+    mysql-db: ~
+
+networks:
+    default:
+        ipam:
+            config:
+                - subnet: 172.19.1.0/24
+
+    idm_network:
+#        driver: bridge
+        ipam:
+            config:
+                - subnet: 172.18.1.0/24
+#                  gateway: 172.18.1.1
+
+secrets:
+   my_secret_data:
+      file: ./secrets.txt
+

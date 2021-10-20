@@ -1,0 +1,10 @@
+d4ddfc76c339d2752faf514c8e7946a1  opt/rampiot/README.md
+254d82bc310f706fa4973fab23dfafad  opt/rampiot/daemon.json
+b1b987c62f3a6def998c9b94b0e9ff45  opt/rampiot/docker-compose.yml
+c5af4780ec33f2f8a0cb73017bb0818e  opt/rampiot/install.sh
+26dc733a37099902b810ee778c711bf4  opt/rampiot/provisioning/datasources/automatic.yml
+3ae4d0ea26c91d9052774138a5027e34  opt/rampiot/test.sh
+dda42af6642abf7c554c0cbb3afbc0ad  opt/rampiot/uninstall.sh
+7ea7fff53ceb278bf095867b22429e60  usr/share/doc/rampiot/README.Debian
+7d6ed308b743a17f67917a41a34bcc5d  usr/share/doc/rampiot/changelog.Debian.gz
+8861b2a85a5e7dcac1c1309fe0883683  usr/share/doc/rampiot/copyright

@@ -1,0 +1,10 @@
+Package: rampiot
+Version: 1.1-1
+Architecture: all
+Maintainer: Kari Kolehmainen <kari.kolehmainen@vtt.fi>
+Installed-Size: 33
+Section: unknown
+Priority: optional
+Homepage: <insert the upstream URL, if relevant>
+Description: <insert up to 60 chars description>
+ <insert long description, indented with spaces>

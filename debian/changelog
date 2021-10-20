@@ -1,0 +1,5 @@
+rampiot (1.1-1) unstable; urgency=medium
+
+  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+
+ -- Kari Kolehmainen <kari.kolehmainen@vtt.fi>  Tue, 19 Oct 2021 10:30:45 +0300
