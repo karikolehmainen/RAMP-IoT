@@ -1,7 +1,3 @@
-
-
-
-
 version: "3.5"
 
 services:
@@ -18,7 +14,7 @@ services:
             - default          
         command: --bind_ip_all --smallfiles
         volumes:
-            - ${RAMP_PATH}/mongo:/data/db
+            - /opt/rampiot/mongo:/data/db
 
     ### Context Broker ###
     orion:
@@ -32,8 +28,6 @@ services:
         ports:
             - 1026:1026
         entrypoint: ["sh", "-c", "rm /tmp/contextBroker.pid; /usr/bin/contextBroker -fg -multiservice -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152 -logLevel DEBUG"]
-        #command:
-        #    -dbhost mongo-db -corsOrigin __ALL -logLevel DEBUG -inReqPayloadMaxSize 2097152
         restart: always
 
     iot-agent:
@@ -63,7 +57,7 @@ services:
             - IOTA_MONGO_DB=iotagentul
             - IOTA_HTTP_PORT=7896
             - IOTA_MQTT_PORT=1883
-            - IOTA_MQTT_HOST=130.188.160.83
+            - IOTA_MQTT_HOST=127.0.0.1
 
             - IOTA_PROVIDER_URL=http://iot-agent:4041
 
@@ -80,7 +74,7 @@ services:
             - "4300:4300"
             - "5432:5432"
         volumes:
-            - ${RAMP_PATH}/cratedata:/data
+            - /opt/rampiot/cratedata:/data
         networks: 
             - default
         restart: always
@@ -117,45 +111,76 @@ services:
         restart: always
 
     # Identity Management
-    mysql:
-        image: mysql/mysql-server:5.7
+
+    keyrock:
+        image: fiware/idm:7.6.0
+        container_name: fiware-keyrock
+        hostname: keyrock
+        networks:
+            default:
+                ipv4_address: 172.19.1.11
+        depends_on:
+            - mysql-db
+        ports:
+            - '8088:8088'
+            - '8089:8089'
+        environment:
+            - DEBUG=idm:*
+            - IDM_DB_HOST=mysql-db
+            - IDM_HOST=http://localhost:8088
+            - IDM_PORT=8088
+            - IDM_DB_PASS=secret
+            - IDM_DB_USER=root
+            - IDM_ADMIN_USER=admin
+            - IDM_ADMIN_EMAIL=admin@test.com
+            - IDM_ADMIN_PASS=1234
+            - IDM_EMAIL_HOST=mailer
+            - IDM_EMAIL_PORT=25
+
+    mysql-db:
+        restart: always
+        image: mysql:5.7
+        hostname: mysql-db
+        container_name: db-mysql
+        expose:
+            - '3306'
         ports:
             - '3306:3306'
         networks:
-            idm_network:
-                ipv4_address: 172.18.1.5
+            default:
+                ipv4_address: 172.19.1.9
         environment:
-           - MYSQL_ROOT_PASSWORD=idm
-           - MYSQL_ROOT_HOST=%
+            # Development use only
+            # Use Docker Secrets for Sensitive Data
+            - MYSQL_ROOT_PASSWORD=secret
+            - MYSQL_ROOT_HOST=172.19.1.11
+        volumes:
+            - mysql-db:/var/lib/mysql
 
-    fiware-idm:
-        image: fiware/idm
-          
+    mailer:
+        restart: always
+        image: mazdermind/docker-mail-relay
+        hostname: mailer
+        container_name: mailer
         ports:
-            - '1024:1024'
-            - '443:443'
-        networks:
-            idm_network:
-                ipv4_address: 172.18.1.6
+            - '25:25'
         environment:
-            - IDM_DB_HOST=mysql
-            - IDM_DB_PASS=idm
+            - SMTP_LOGIN=<login> # Login to connect to the external relay
+            - SMTP_PASSWORD=<password> # Password to connect to the external relay
+            - EXT_RELAY_HOST=<hostname> # External relay DNS name
+            - EXT_RELAY_PORT=25
+            - ACCEPTED_NETWORKS=172.19.1.0/24
+            - USE_TLS=no
 
 volumes:
     mongo-db:
     cratedata:
     grafana-storage:
-    vol-mysql:
+    mysql-db: ~
+    keyrock-users: ~
 
 networks:
     default:
         ipam:
             config:
                 - subnet: 172.19.1.0/24
-
-    idm_network:
-#        driver: bridge
-        ipam:
-            config:
-                - subnet: 172.18.1.0/24
-                  gateway: 172.18.1.1
