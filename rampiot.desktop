@@ -1,0 +1,23 @@
+[Desktop Entry]
+Version=1.0
+Name=RAMP-IoT
+Name[fi]=RAMP-IoT
+Comment=RAMP IoT platform
+Comment[fi]=RAMP IoT alusta
+GenericName=RAMP-IoT
+GenericName[fi]=RAMP-IoT
+Keywords=RAMP;IoT;FIWARE
+Exec=firefox %u http://localhost:8088/
+Terminal=false
+X-MultipleArgs=false
+Type=Application
+Icon=firefox
+Categories=GNOME;GTK;Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/rss+xml;application/rdf+xml;image/gif;image/jpeg;image/png;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/ftp;x-scheme-handler/chrome;video/webm;application/x-xpinstall;
+StartupNotify=true
+Actions=new-window
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=firefox -new-window
+
