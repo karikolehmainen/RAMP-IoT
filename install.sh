@@ -31,16 +31,9 @@ else
 fi
 
 # Docker Compose
-if [[ $(docker-compose version) == *" 1.29."* ]]; then
-    echo 'Docker version sufficient'
-else
-	sudo wget --output-document=/usr/local/bin/docker-compose "https://github.com/docker/compose/releases/download/$(wget --quiet --output-document=- https://api.github.com/repos/docker/compose/releases/latest | grep --perl-regexp --only-matching '"tag_name": "\K.*?(?=")')/run.sh"
-	sudo chmod +x /usr/local/bin/docker-compose
-	sudo wget --output-document=/etc/bash_completion.d/docker-compose "https://raw.githubusercontent.com/docker/compose/$(docker-compose version --short)/contrib/completion/bash/docker-compose"
-	printf '\nDocker Compose installed successfully\n\n'
-
-	sleep 5
-fi
+wget https://github.com/docker/compose/releases/download/v2.2.3/docker-compose-linux-x86_64 -O /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+printf '\nDocker Compose installed successfully\n\n'
 #
 # Copy docker daemon conf file
 #
@@ -48,9 +41,13 @@ cp daemon.json /etc/docker/
 
 
 printf 'Launch RAMP IoT platform containers...\n\n'
-export RAMP_PATH=${pwd}
+export RAMP_PATH=/opt/rampiot
 
 sudo sysctl -w vm.max_map_count=262144
 sudo docker-compose up -d
 
 
+#
+# Copy desktop launcher
+#
+sudo ln -s /opt/rampiot/rampiot.desktop /usr/share/applications/
