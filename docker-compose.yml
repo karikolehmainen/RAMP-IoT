@@ -23,11 +23,18 @@ services:
         container_name: fiware-orion
         depends_on:
             - mongo-db
+        environment:
+            - ORION_HTTPS=true
+            - ORION_HTTPS_KEYFILE=/etc/cert/server.key
+            - ORION_HTTPS_CERTFILE=/etc/cert/server.crt
+	volumes:
+            - /etc/cert/server.crt:/etc/cert/server.crt
+            - /etc/cert/server.key:/etc/cert/server.key
         networks:
             - default
         ports:
             - 1026:1026
-        entrypoint: ["sh", "-c", "rm /tmp/contextBroker.pid; /usr/bin/contextBroker -fg -multiservice -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152 -logLevel DEBUG"]
+        entrypoint: ["sh", "-c", "rm /tmp/contextBroker.pid; /usr/bin/contextBroker -fg -multiservice -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152 -logLevel INFO"]
         restart: always
 
     iot-agent:
@@ -64,7 +71,7 @@ services:
     crate-db:
         image: crate:4.1.4
         hostname: crate-db
-        command: crate -Cauth.host_based.enabled=false -Ccluster.name=rampcluster -Chttp.cors.enabled=false -Chttp.cors.allow-origin="*"
+        command: crate -Cauth.host_based.enabled=false -Ccluster.name=rampcluster -Chttp.cors.enabled=false -Chttp.cors.allow-origin="*" -Cssl.http.enabled=true -Cssl.keystore_filepath=/etc/cert/keystore.jks -Cssl.keystore_key_password=rampiot -Cssl.keystore_password=rampiot
         environment:
             - CRATE_HEAP_SIZE=2g
         ports:
@@ -75,6 +82,7 @@ services:
             - "5432:5432"
         volumes:
             - /opt/rampiot/cratedata:/data
+            - /etc/cert/:/etc/cert/
         networks: 
             - default
         restart: always
@@ -90,7 +98,6 @@ services:
         environment:
             - CRATE_HOST=crate-db
             - CRATE_PORT=4200
-            - USE_GEOCODING=True
         networks:
             - default
 
@@ -101,6 +108,10 @@ services:
             - crate-db
         container_name: grafana
         hostname: grafana
+	environment:
+            GF_SERVER_PROTOCOL: https
+            GF_SERVER_CERT_FILE: /etc/cert/server.crt
+            GF_SERVER_CERT_KEY: /etc/cert/server.key
         ports:
             - 3000:3000
         networks:
@@ -108,12 +119,14 @@ services:
         volumes:
             - grafana-storage:/var/lib/grafana
             - ./provisioning:/etc/grafana/provisioning/
+            - /etc/cert/server.crt:/etc/cert/server.crt
+            - /etc/cert/server.key:/etc/cert/server.key
         restart: always
 
     # Identity Management
 
     keyrock:
-        image: fiware/idm:7.6.0
+        image: fiware/idm:latest
         container_name: fiware-keyrock
         hostname: keyrock
         networks:
@@ -127,15 +140,56 @@ services:
         environment:
             - DEBUG=idm:*
             - IDM_DB_HOST=mysql-db
-            - IDM_HOST=http://localhost:8088
-            - IDM_PORT=8088
             - IDM_DB_PASS=secret
             - IDM_DB_USER=root
+            - IDM_HTTPS_ENABLED=true
+            - IDM_HTTPS_PORT=8080
+            - IDM_HOST=http://localhost:8081
+            - IDM_PORT=8081
             - IDM_ADMIN_USER=admin
             - IDM_ADMIN_EMAIL=admin@test.com
             - IDM_ADMIN_PASS=1234
-            - IDM_EMAIL_HOST=mailer
-            - IDM_EMAIL_PORT=25
+        volumes:
+            - /etc/cert/server.crt:/opt/fiware-idm/certs/idm-2018-cert.pem
+            - /etc/cert/server.key:/opt/fiware-idm/certs/idm-2018-key.pem
+
+    orion-proxy:
+       image: fiware/pep-proxy:latest
+       container_name: fiware-orion-proxy
+       hostname: orion-proxy
+       networks:
+          decode:
+             ipv4_address: 172.19.2.65
+       depends_on:
+          keyrock:  # keyrock or keycloak running on network server
+             condition: service_started
+          authzforce:
+             condition: service_started
+       deploy:
+          restart_policy:
+             condition: on-failure
+       ports:
+          - "1027:1027" # localhost:1027
+       expose:
+          - "1027"
+       environment:
+          - DEBUG=pep-proxy:*
+          - PEP_PROXY_DEBUG=true
+          - PEP_PROXY_APP_HOST=https://decode.collab-cloud.eu
+          - PEP_PROXY_APP_PORT=1026
+          - PEP_PROXY_PORT=1027
+          - PEP_PROXY_IDM_HOST=172.19.2.60
+          - PEP_PROXY_HTTPS_ENABLED=true
+          - PEP_PROXY_IDM_SSL_ENABLED=true
+          - PEP_PROXY_IDM_PORT=8080
+          - PEP_PROXY_APP_ID=<app_id_to_be_filled>
+          - PEP_PROXY_USERNAME=rampiot_fiware
+          - PEP_PASSWORD=<password_from_keyrock_to_be_filled>
+       volumes:
+            - /etc/cert/server.key:/opt/fiware-pep-proxy/cert/key.key
+            - /etc/cert/server.crt:/opt/fiware-pep-proxy/cert/cert.crt
+       healthcheck:
+          interval: 50s
 
     mysql-db:
         restart: always
@@ -150,27 +204,12 @@ services:
             default:
                 ipv4_address: 172.19.1.9
         environment:
-            # Development use only
-            # Use Docker Secrets for Sensitive Data
             - MYSQL_ROOT_PASSWORD=secret
             - MYSQL_ROOT_HOST=172.19.1.11
         volumes:
             - mysql-db:/var/lib/mysql
 
-    mailer:
-        restart: always
-        image: mazdermind/docker-mail-relay
-        hostname: mailer
-        container_name: mailer
-        ports:
-            - '25:25'
-        environment:
-            - SMTP_LOGIN=<login> # Login to connect to the external relay
-            - SMTP_PASSWORD=<password> # Password to connect to the external relay
-            - EXT_RELAY_HOST=<hostname> # External relay DNS name
-            - EXT_RELAY_PORT=25
-            - ACCEPTED_NETWORKS=172.19.1.0/24
-            - USE_TLS=no
+
 
 volumes:
     mongo-db:
