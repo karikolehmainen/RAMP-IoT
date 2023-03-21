@@ -49,7 +49,7 @@ fi
 
 printf 'Launch RAMP IoT platform containers...\n\n'
 export RAMP_PATH=/opt/rampiot
-
+echo $RAMP_PATH >> /etc/profile
 
 if grep -q "vm.max_map_count=262144" /etc/sysctl.conf; then
 	echo "vm.max_map_count sufficient"
