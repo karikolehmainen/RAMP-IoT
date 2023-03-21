@@ -129,9 +129,6 @@ services:
         image: fiware/idm:latest
         container_name: fiware-keyrock
         hostname: keyrock
-        networks:
-            default:
-                ipv4_address: 172.19.1.11
         depends_on:
             - mysql-db
         ports:
@@ -140,7 +137,7 @@ services:
         environment:
             - DEBUG=idm:*
             - IDM_DB_HOST=mysql-db
-            - IDM_DB_PASS=secret
+            - IDM_DB_PASS=verysecretpassword
             - IDM_DB_USER=root
             - IDM_HTTPS_ENABLED=true
             - IDM_HTTPS_PORT=8080
@@ -188,22 +185,22 @@ services:
 
     mysql-db:
         restart: always
-        image: mysql:5.7
+        image: mysql/mysql-server:5.7
         hostname: mysql-db
-        container_name: db-mysql
+        container_name: mysql
         expose:
-            - '3306'
+            - "3306"
         ports:
             - '3306:3306'
-        networks:
-            default:
-                ipv4_address: 172.19.1.9
         environment:
-            - MYSQL_ROOT_PASSWORD=secret
-            - MYSQL_ROOT_HOST=172.19.1.11
+           - MYSQL_DATABASE=idm
+           - MYSQL_ROOT_PASSWORD=verysecretpassword
+           - MYSQL_ROOT_HOST=0.0.0.0
+           - MYSQL_USER=user
+           - MYSQL_PASSWORD=password
         volumes:
-            - mysql-db:/var/lib/mysql
-
+           - /opt/rampiot/mysql-db:/var/lib/mysql
+           - ./mysql-data/backup.sql:/docker-entrypoint-initdb.d/backup.sql # Preload Keyrock Users
 
 
 volumes:
@@ -218,3 +215,4 @@ networks:
         ipam:
             config:
                 - subnet: 172.19.1.0/24
+
