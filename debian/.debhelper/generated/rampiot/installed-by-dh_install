@@ -1,7 +1,0 @@
-./README.md
-./daemon.json
-./docker-compose.yml
-./install.sh
-./provisioning
-./test.sh
-./uninstall.sh

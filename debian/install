@@ -1,7 +1,0 @@
-README.md /opt/rampiot
-daemon.json /opt/rampiot
-docker-compose.yml /opt/rampiot
-install.sh /opt/rampiot
-provisioning /opt/rampiot
-test.sh /opt/rampiot
-uninstall.sh /opt/rampiot
