@@ -36,14 +36,7 @@ echo '####################################################'
 docker volume rm $(docker volume ls -q)
 
 docker system prune -a
-
-if [[ -z "${RAMP_PATH}" ]];
-then
-  DATA_PATH=${PWD}
-else
-  DATA_PATH=${RAMP_PATH}
-fi
-
+DATA_PATH="/opt/rampiot"
 echo $DATA_PATH
-rm $DATA_PATH/mongo
-rm $DATA_PATH/cratedata
+rm -rf $DATA_PATH/mongo
+rm -rf $DATA_PATH/cratedata
