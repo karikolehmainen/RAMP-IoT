@@ -1,6 +1,7 @@
 # RAMP IoT Platform
 RAMP IoT Plarform is FIWARE installation to be installed on factory premises and is connected with RAMP marketplace. This is 
-template platform setup with minumial configurations to get you started.
+template platform setup with minumial configurations to get you started. RAMP IoT platform is implemented using FIWARE generic enablers. 
+Basic set of FIWARE components are included as Dockerised components. 
 
 ## Prerequisite
 RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose are required
@@ -11,6 +12,93 @@ basic configuations. Some environment configurations are done in order to run ti
 modification is to increase vm.max_map_count to 262144. An other one is to define maximum log file size for docker. These are 
 done by install script and if you do not wish to use it, you need to do those manually.
 
+## TLS and Encryption
+Communication between components is using TLS encryption. If interfaces are to be exposed to public networks, valid certificates should be used.
+For internal use, self-signed (or even unsecured) access might be also applicable. Please note that some systems may not work with self-signed certiface if they 
+try to validate the certificates. 
+
+Certificates should be placed in 
+```
+/etc/cert
+```
+directory on the host machine and named as server.crt (public key) and server.key (private.key). Or docker-compose.yml file may be modifed to use what ever certificates you have in place
+
+### Creating Self-Signed Certificates
+First create Certificate Authority (CA) files with commands:
+````
+openssl req -x509 \
+            -sha256 -days 356 \
+            -nodes \
+            -newkey rsa:2048 \
+            -subj "/CN=<domain or IP>/C=US/L=San Fransisco" \
+            -keyout rootCA.key -out rootCA.crt
+````
+Where <domain or IP> is the domain or IP address of the machine where IoT platform is running. 
+Next create server private key file:
+  ````
+  openssl genrsa -out server.key 2048
+  ````
+  
+Then create configuration file for certficate signing request (can be also given from command prompt):
+`````
+cat > csr.conf <<EOF
+[ req ]
+default_bits = 2048
+prompt = no
+default_md = sha256
+req_extensions = req_ext
+distinguished_name = dn
+
+[ dn ]
+C = <country>
+ST = <state>
+L = <city>
+O = <organization name>
+OU = <organization unit name>
+CN = <domain name>
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = <domain name 1>
+DNS.2 = <domain name n>
+IP.1 = <IP 1>
+IP.2 = <IP n> 
+
+EOF
+`````
+Replace the information fields with data that is relevant to your company. You can then use the configuration file with server private key to easily create certificate signing request:
+  ````
+  openssl req -new -key server.key -out server.csr -config csr.conf
+  ````
+Up until this point these steps also apply for creating fully authorised certificate, you can use server private key and and certificate signing request (CSR) to apply for certificate from 
+public authority. 
+  
+Next you can create certificate configuration file:
+````
+cat > cert.conf <<EOF
+
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = demo.mlopshub.com
+
+EOF
+````
+Finally you can create the server public key using the above created files:
+  ````
+  openssl x509 -req \
+    -in server.csr \
+    -CA rootCA.crt -CAkey rootCA.key \
+    -CAcreateserial -out server.crt \
+    -days 365 \
+    -sha256 -extfile cert.conf
+  ````
+ 
 ## Key Elements
 RAMP IoT platform provides set of FIWARE Generic Enablers ready to be used as IoT platform. Here is a list of key components with their interfaces:
 * Port 1026 Orion Context Broker without PEP (Policy Enforcement Point) Proxy
