@@ -4,7 +4,10 @@ template platform setup with minumial configurations to get you started. RAMP Io
 Basic set of FIWARE components are included as Dockerised components. 
 
 ## Prerequisite
-RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose are required
+RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose are required. Machine where IoT platform can be either virtual machine or real computer, but it needs to have sufficient resources. Environment requires these _minimum_ resources:
+- 4GB RAM (Hard minum limit, more is better)
+- 60GB Disk space (more as needed for the data that is being stored)
+- 4 CPU's (less can work but results in performance loss)
 
 ## Installation
 install.sh shell script install all requisites (uses Debian package manager) and launches docker containers with 
