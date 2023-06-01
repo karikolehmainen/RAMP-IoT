@@ -9,6 +9,20 @@ RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose 
 - 60GB Disk space (more as needed for the data that is being stored)
 - 4 CPU's (less can work but results in performance loss)
 
+## Quick start
+1. Install Ubuntu (at least 20LTS version or newer) to machine with minumum specification from last chapter. 
+2. Clone this repository to the computer 
+```
+git clone https://github.com/karikolehmainen/RAMP-IoT.git
+````
+3. Run the install script from cloned repository 
+```
+cd RAMP-IoT
+sudo ./install.sh
+````
+4. verify that containers are up once the install script finishers. Command is ```sudo docker ps``` you should see all container started and what ports they use
+
+
 ## Installation
 install.sh shell script install all requisites (uses Debian package manager) and launches docker containers with 
 basic configuations. Some environment configurations are done in order to run timeseries database efficiently. Most crucial 
