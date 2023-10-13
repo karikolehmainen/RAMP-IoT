@@ -32,13 +32,20 @@ done by install script and if you do not wish to use it, you need to do those ma
 ## TLS and Encryption
 Communication between components is using TLS encryption. If interfaces are to be exposed to public networks, valid certificates should be used.
 For internal use, self-signed (or even unsecured) access might be also applicable. Please note that some systems may not work with self-signed certiface if they 
-try to validate the certificates. 
+try to validate the certificates. Certificates should be in PEM format.
 
 Certificates should be placed in 
 ```
 /etc/cert
 ```
 directory on the host machine and named as server.crt (public key) and server.key (private.key). Or docker-compose.yml file may be modifed to use what ever certificates you have in place
+
+With real certificates (as well as self-singed ones) it is important to include subCA and CA certificates on the same chain. Chaining of the certificates is simply done by appending them together in the same file. For example:
+```
+cat machine.crt subca.crt ca.crt > server.crt
+sudo cp server.crt /etc/cert/
+```
+
 
 ### Creating Self-Signed Certificates
 First create Certificate Authority (CA) files with commands:
