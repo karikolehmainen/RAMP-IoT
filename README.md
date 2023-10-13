@@ -8,6 +8,8 @@ RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose 
 - 4GB RAM (Hard minum limit, more is better)
 - 60GB Disk space (more as needed for the data that is being stored)
 - 4 CPU's (less can work but results in performance loss)
+## FIWARE Documentation
+https://fiware-tutorials.readthedocs.io/en/latest/
 
 ## Quick start
 1. Install Ubuntu (at least 20LTS version or newer) to machine with minumum specification from last chapter. 
