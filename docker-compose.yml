@@ -89,7 +89,7 @@ services:
 
     quantumleap:
         hostname: quantumleap
-        image: smartsdk/quantumleap:latest
+        image: orchestracities/quantumleap:latest
         depends_on:
             - crate-db
         container_name: fiware-quantumleap
