@@ -11,7 +11,7 @@ services:
         ports:
             - 27017:27017
         networks:
-            - default          
+            - network          
         command: --bind_ip_all --smallfiles
         volumes:
             - /opt/rampiot/mongo:/data/db
@@ -31,7 +31,7 @@ services:
             - /etc/cert/server.crt:/etc/cert/server.crt
             - /etc/cert/server.key:/etc/cert/server.key
         networks:
-            - default
+            - network
         ports:
             - 1026:1026
         entrypoint: ["sh", "-c", "rm /tmp/contextBroker.pid; /usr/bin/contextBroker -fg -multiservice -dbhost mongo-db -corsOrigin __ALL -inReqPayloadMaxSize 2097152 -logLevel INFO"]
@@ -44,7 +44,7 @@ services:
         depends_on:
             - mongo-db
         networks:
-            - default
+            - network
         expose:
             - "4041"
             - "7896"
@@ -84,7 +84,7 @@ services:
             - /opt/rampiot/cratedata:/data
             - /etc/cert/:/etc/cert/
         networks: 
-            - default
+            - network
         restart: always
 
     quantumleap:
@@ -99,7 +99,7 @@ services:
             - CRATE_HOST=crate-db
             - CRATE_PORT=4200
         networks:
-            - default
+            - network
 
     ### Grafana dashboard ###
     grafana:
@@ -115,7 +115,7 @@ services:
         ports:
             - 3000:3000
         networks:
-            - default
+            - network
         volumes:
             - grafana-storage:/var/lib/grafana
             - ./provisioning:/etc/grafana/provisioning/
@@ -123,96 +123,16 @@ services:
             - /etc/cert/server.key:/etc/cert/server.key
         restart: always
 
-    # Identity Management
-
-    keyrock:
-        image: fiware/idm:latest
-        container_name: fiware-keyrock
-        hostname: keyrock
-        depends_on:
-            - mysql-db
-        ports:
-            - '8088:8088'
-            - '8089:8089'
-        environment:
-            - DEBUG=idm:*
-            - IDM_DB_HOST=mysql-db
-            - IDM_DB_PASS=verysecretpassword
-            - IDM_DB_USER=root
-            - IDM_HTTPS_ENABLED=true
-            - IDM_HTTPS_PORT=8080
-            - IDM_HOST=http://localhost:8081
-            - IDM_PORT=8081
-            - IDM_ADMIN_USER=admin
-            - IDM_ADMIN_EMAIL=admin@test.com
-            - IDM_ADMIN_PASS=1234
-        volumes:
-            - /etc/cert/server.crt:/opt/fiware-idm/certs/idm-2018-cert.pem
-            - /etc/cert/server.key:/opt/fiware-idm/certs/idm-2018-key.pem
-
-    orion-proxy:
-       image: fiware/pep-proxy:latest
-       container_name: fiware-orion-proxy
-       hostname: orion-proxy
-       depends_on:
-          keyrock:  # keyrock or keycloak running on network server
-             condition: service_started
-       deploy:
-          restart_policy:
-             condition: on-failure
-       ports:
-          - "1027:1027" # localhost:1027
-       expose:
-          - "1027"
-       environment:
-          - DEBUG=pep-proxy:*
-          - PEP_PROXY_DEBUG=true
-          - PEP_PROXY_APP_HOST=localhost
-          - PEP_PROXY_APP_PORT=1026
-          - PEP_PROXY_PORT=1027
-          - PEP_PROXY_IDM_HOST=keyrock
-          - PEP_PROXY_HTTPS_ENABLED=true
-          - PEP_PROXY_IDM_SSL_ENABLED=true
-          - PEP_PROXY_IDM_PORT=8080
-          - PEP_PROXY_APP_ID=<app_id_to_be_filled>
-          - PEP_PROXY_USERNAME=rampiot_fiware
-          - PEP_PASSWORD=<password_from_keyrock_to_be_filled>
-       volumes:
-            - /etc/cert/server.key:/opt/fiware-pep-proxy/cert/key.key
-            - /etc/cert/server.crt:/opt/fiware-pep-proxy/cert/cert.crt
-       healthcheck:
-          interval: 50s
-
-    mysql-db:
-        restart: always
-        image: mysql/mysql-server:5.7
-        hostname: mysql-db
-        container_name: mysql
-        expose:
-            - "3306"
-        ports:
-            - '3306:3306'
-        environment:
-           - MYSQL_DATABASE=idm
-           - MYSQL_ROOT_PASSWORD=verysecretpassword
-           - MYSQL_ROOT_HOST=0.0.0.0
-           - MYSQL_USER=user
-           - MYSQL_PASSWORD=password
-        volumes:
-           - /opt/rampiot/mysql-db:/var/lib/mysql
-           - ./mysql-data/backup.sql:/docker-entrypoint-initdb.d/backup.sql # Preload Keyrock Users
-
-
 volumes:
     mongo-db:
     cratedata:
     grafana-storage:
-    mysql-db: ~
+    idm_mysql: ~
     keyrock-users: ~
 
 networks:
-    default:
+    network:
         ipam:
             config:
-                - subnet: 172.19.1.0/24
+                - subnet: 172.18.1.0/24
 
