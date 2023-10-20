@@ -3,6 +3,8 @@ RAMP IoT Plarform is FIWARE installation to be installed on factory premises and
 template platform setup with minumial configurations to get you started. RAMP IoT platform is implemented using FIWARE generic enablers. 
 Basic set of FIWARE components are included as Dockerised components. 
 
+Platform is intented to be run on inside company secure network. If you run the platform in publicly available computer please take care of properly securing the server.
+
 ## Prerequisite
 RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose are required. Machine where IoT platform can be either virtual machine or real computer, but it needs to have sufficient resources. Environment requires these _minimum_ resources:
 - 4GB RAM (Hard minum limit, more is better)
@@ -26,8 +28,20 @@ sudo ./install.sh
 
 
 ## Installation
-install.sh shell script install all requisites (uses Debian package manager) and launches docker containers with 
-basic configuations. Some environment configurations are done in order to run timeseries database efficiently. Most crucial 
+Ubuntu Linux environment is asumed as base platform. Docker environment is needed on top of the vanilla Ubuntu distribution. Instructions on how to install Docker environment
+is found in: https://docs.docker.com/engine/install/ubuntu/
+
+Once Docker environment has been installed you can clone the this repository to have deployment files
+```
+git clone https://github.com/karikolehmainen/RAMP-IoT.git
+```
+Then you can use Docker componse to instantiate the platform
+```
+cd RAMP-IoT
+sudo docker compose up -d
+```
+
+Some environment configurations might be necessary in order to run timeseries database efficiently. Most crucial 
 modification is to increase vm.max_map_count to 262144. An other one is to define maximum log file size for docker. These are 
 done by install script and if you do not wish to use it, you need to do those manually.
 
