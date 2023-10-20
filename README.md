@@ -13,20 +13,6 @@ RAMP IoT platform runs in Docker containers and hence Docker and Docker-Compose 
 ## FIWARE Documentation
 https://fiware-tutorials.readthedocs.io/en/latest/
 
-## Quick start
-1. Install Ubuntu (at least 20LTS version or newer) to machine with minumum specification from last chapter. 
-2. Clone this repository to the computer 
-```
-git clone https://github.com/karikolehmainen/RAMP-IoT.git
-````
-3. Run the install script from cloned repository 
-```
-cd RAMP-IoT
-sudo ./install.sh
-````
-4. verify that containers are up once the install script finishers. Command is ```sudo docker ps``` you should see all container started and what ports they use
-
-
 ## Installation
 Ubuntu Linux environment is asumed as base platform. Docker environment is needed on top of the vanilla Ubuntu distribution. Instructions on how to install Docker environment
 is found in: https://docs.docker.com/engine/install/ubuntu/
@@ -39,6 +25,10 @@ Then you can use Docker componse to instantiate the platform
 ```
 cd RAMP-IoT
 sudo docker compose up -d
+```
+You can verify the status of Docker containers with this command
+```
+sudo docker ps
 ```
 
 Some environment configurations might be necessary in order to run timeseries database efficiently. Most crucial 
